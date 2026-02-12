@@ -1,12 +1,9 @@
-from __future__ import annotations
-
-from collections.abc import Awaitable
-from typing import Any
-
 import redis
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 from common.config import config
 from common.task import Task
+
+TASK_ADAPTER: TypeAdapter[Task] = TypeAdapter(Task)
 
 
 class RedisTaskQueue:
@@ -21,16 +18,15 @@ class RedisTaskQueue:
         )
 
     def enqueue(self, task: Task) -> None:
-        payload: str = task.model_dump_json()
+        payload: str = TASK_ADAPTER.dump_json(task).decode("utf-8")
         self._client.rpush(self.queue_key, payload)
 
     def dequeue(self) -> Task | None:
         raw_item: tuple[str, str] = self._client.blpop([self.queue_key])  # type: ignore
         assert type(raw_item) is tuple
-        print(f"{raw_item=}")
         try:
             payload: str = raw_item[1]
-            return Task.model_validate_json(payload)
+            return TASK_ADAPTER.validate_json(payload)
         except ValidationError as exc:
             raise ValueError("invalid queued task payload") from exc
 

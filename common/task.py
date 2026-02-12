@@ -1,11 +1,9 @@
 from pathlib import Path
+from pydantic.dataclasses import dataclass
+from .config import config
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class Task(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(min_length=1)
+@dataclass
+class Task:
+    id: str
     file_path: Path
-    time_limit: int = Field(ge=1)
+    time_limit: int = config.runner.default_time_limit

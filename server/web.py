@@ -19,6 +19,7 @@ class SubmissionStore:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
     async def save_upload(self, file: UploadFile, submission_id: str) -> Path:
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
         stored_path: Path = self.upload_dir / f"{submission_id}.img"
         assert file.size is not None, "assume UploadFile.size is set for simplicity"
         if file.size > config.server.max_file_size_bytes:
@@ -42,7 +43,7 @@ def make_submission_id() -> str:
     return f"{ts}-{suffix}"
 
 
-@app.get("/")
+@app.get("/queue")
 def get_queue_size() -> dict[str, int]:
     try:
         return {"queue_size": queue.size()}

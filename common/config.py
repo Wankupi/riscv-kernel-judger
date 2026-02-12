@@ -26,16 +26,12 @@ class ConfigServer(BaseModel):
 
 
 class ConfigRunner(BaseModel):
-    tftp_kernel_path: Path = Path("./static/boot/kernel.img")
     tty_power: str
-    relay_addrs: list[int]
-    default_timeout: int = Field(default=30, ge=1)
-
-
-class ConfigBroadcast(BaseModel):
-    tty_device: str
-    baudrate: int = Field(default=115200, ge=1)
-    tcp_port: int = Field(default=12345, ge=1, le=65535)
+    tty_board: str
+    result_dir: Path = Path("./results")
+    tftp_kernel_path: Path = Path("./static/boot/kernel.img")
+    power_addrs: list[int]
+    default_time_limit: int = Field(default=30, ge=1)
 
 
 class Config(BaseSettings):
@@ -46,7 +42,6 @@ class Config(BaseSettings):
     redis: ConfigRedis
     server: ConfigServer
     runner: ConfigRunner
-    broadcast: ConfigBroadcast
 
     @classmethod
     def settings_customise_sources(
