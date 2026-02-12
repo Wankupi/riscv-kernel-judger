@@ -1,0 +1,9 @@
+*.yaml
+*.yml
+__pycache__/
+.venv/
+*.pyc
+*.uimg
+*.elf
+*.img
+*.bin
