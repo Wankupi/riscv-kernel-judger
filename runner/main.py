@@ -37,6 +37,8 @@ class KernelJudgerRunner:
         timeout: int = task.time_limit or config.runner.default_time_limit
         config.runner.result_dir.mkdir(parents=True, exist_ok=True)
         result_path = config.runner.result_dir / f"{task.id}.txt"
+        # make sure power is off before starting
+        self.relay.off(config.runner.power_addrs)
         with (
             Serial(config.runner.tty_board, baudrate=115200) as tty_board,
             open(result_path, "wb") as result,
