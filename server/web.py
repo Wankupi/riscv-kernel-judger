@@ -44,9 +44,9 @@ def make_submission_id() -> str:
 
 
 @app.get("/queue")
-def get_queue_size() -> dict[str, int]:
+async def get_queue_size() -> dict[str, int]:
     try:
-        return {"queue_size": queue.size()}
+        return {"queue_size": await queue.size()}
     except redis.RedisError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -76,7 +76,7 @@ async def submit(
     )
 
     try:
-        queue.enqueue(task)
+        await queue.enqueue(task)
     except redis.RedisError as exc:
         if stored_path.exists():
             stored_path.unlink()

@@ -1,3 +1,4 @@
+import asyncio
 import time
 import logging
 from serial import Serial
@@ -16,10 +17,10 @@ class KernelJudgerRunner:
         assert self.relay.is_open, f"cannot open relay device: {config.runner.tty_power}"
         self.relay.off(config.runner.power_addrs)
 
-    def run_forever(self) -> None:
+    async def run_forever(self) -> None:
         logger.info("runner started")
         while True:
-            task: Task | None = self.queue_client.dequeue()
+            task: Task | None = await self.queue_client.dequeue()
             if task is None:
                 continue
             logger.info("enter run_task taskid=%s", task.id)
@@ -68,6 +69,6 @@ if __name__ == "__main__":
     )
     runner = KernelJudgerRunner()
     try:
-        runner.run_forever()
+        asyncio.run(runner.run_forever())
     except KeyboardInterrupt:
         logger.info("runner stopped by user")
