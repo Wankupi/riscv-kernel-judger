@@ -25,13 +25,13 @@ class KernelJudgerRunner:
                 continue
             logger.info("enter run_task taskid=%s", task.id)
             try:
-                self.run_task(task)
+                await self.run_task(task)
             except Exception:
                 logger.exception("task failed taskid=%s", task.id)
             finally:
                 logger.info("leave run_task taskid=%s", task.id)
 
-    def run_task(self, task: Task) -> None:
+    async def run_task(self, task: Task) -> None:
         # 1) boot preparation: copy student kernel into TFTP directory
         self.prepare(task)
         # 2) power on -> wait -> power off
@@ -40,21 +40,28 @@ class KernelJudgerRunner:
         result_path = config.runner.result_dir / f"{task.id}.txt"
         # make sure power is off before starting
         self.relay.off(config.runner.power_addrs)
-        with (
-            Serial(config.runner.tty_board, baudrate=115200) as tty_board,
-            open(result_path, "wb") as result,
-            PowerManager(self.relay, config.runner.power_addrs),
-        ):
-            deadline: float = time.monotonic() + float(timeout)
-            while True:
-                left_time: float = deadline - time.monotonic()
-                if left_time <= 0:
-                    break
-                tty_board.timeout = left_time
-                size: int = tty_board.in_waiting or 4096
-                data = tty_board.read(size)
-                result.write(data)
-                result.flush()
+        try:
+            # init the redis stream with an empty chunk to indicate the task has started
+            await self.queue_client.pub_result(task.id, b"")
+            with (
+                Serial(config.runner.tty_board, baudrate=115200) as tty_board,
+                open(result_path, "wb") as result,
+                PowerManager(self.relay, config.runner.power_addrs),
+            ):
+                deadline: float = time.monotonic() + float(timeout)
+                while True:
+                    left_time: float = deadline - time.monotonic()
+                    if left_time <= 0:
+                        break
+                    tty_board.timeout = left_time
+                    size: int = tty_board.in_waiting or 4096
+                    data: bytes = tty_board.readline(size)
+                    if data:
+                        await self.queue_client.pub_result(task.id, data)
+                        result.write(data)
+                        result.flush()
+        finally:
+            await self.queue_client.pub_result_done(task.id)
 
     def prepare(self, task: Task) -> None:
         dst_path = config.runner.tftp_kernel_path

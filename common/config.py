@@ -16,6 +16,7 @@ class ConfigRedis(BaseModel):
     db: int = Field(default=0, ge=0)
     password: str | None = None
     queue_key: str = "riscv-kernel-judger:queue"
+    task_key: str = "riscv-kernel-judger:task"
 
 
 class ConfigServer(BaseModel):

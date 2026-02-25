@@ -1,10 +1,11 @@
-from __future__ import annotations
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 from typing import Annotated
 import uuid
 
+from fastapi.responses import FileResponse, StreamingResponse
 import redis
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 
@@ -86,6 +87,31 @@ async def submit(
         ) from exc
 
     return {"id": submission_id}
+
+
+@app.get("/result/{task_id}")
+async def get_result(task_id: str):
+    # if redis stream exists, stream from redis; otherwise, try to read from file
+    # otherwise, return 404
+    key: str = f"{config.redis.task_key}:{task_id}"
+    result_path: Path = config.runner.result_dir / f"{task_id}.txt"
+
+    # tricky logic to determine the state of the task:
+    started = result_path.exists()
+    finished = not bool(await queue.exists(key))
+
+    assert (not finished or started) and "invalid state: finished but not started"
+
+    if finished:
+        return FileResponse(
+            result_path, media_type="text/plain; charset=utf-8", filename=f"{task_id}.txt"
+        )
+
+    async def stream_redis() -> AsyncIterator[bytes]:
+        async for chunk in queue.sub_result(task_id=task_id):
+            yield chunk
+
+    return StreamingResponse(stream_redis(), media_type="text/plain; charset=utf-8")
 
 
 if __name__ == "__main__":
