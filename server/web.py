@@ -4,10 +4,10 @@ from pathlib import Path
 import shutil
 from typing import Annotated
 import uuid
-
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile, status
 import redis
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from pydantic.dataclasses import dataclass
 
 from common.config import config
 from common.redis import RedisTaskQueue
@@ -44,10 +44,15 @@ def make_submission_id() -> str:
     return f"{ts}-{suffix}"
 
 
+@dataclass
+class QueueStatus:
+    queue_size: int
+
+
 @app.get("/queue")
-async def get_queue_size() -> dict[str, int]:
+async def get_queue_size() -> QueueStatus:
     try:
-        return {"queue_size": await queue.size()}
+        return QueueStatus(queue_size=await queue.size())
     except redis.RedisError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -55,11 +60,16 @@ async def get_queue_size() -> dict[str, int]:
         ) from exc
 
 
+@dataclass
+class SubmitResponse:
+    id: str
+
+
 @app.post("/submit")
 async def submit(
     file: Annotated[UploadFile, File()],
     time_limit: Annotated[int, Form()],
-) -> dict[str, str]:
+) -> SubmitResponse:
     if time_limit <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid time_limit")
 
@@ -86,11 +96,11 @@ async def submit(
             detail="queue is unavailable",
         ) from exc
 
-    return {"id": submission_id}
+    return SubmitResponse(id=submission_id)
 
 
 @app.get("/result/{task_id}")
-async def get_result(task_id: str):
+async def get_result(task_id: str) -> Response:
     # if redis stream exists, stream from redis; otherwise, try to read from file
     # otherwise, return 404
     key: str = f"{config.redis.task_key}:{task_id}"
