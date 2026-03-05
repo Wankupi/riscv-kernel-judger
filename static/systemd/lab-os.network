@@ -1,0 +1,17 @@
+[Match]
+Name=lab0
+
+[Network]
+Address=10.0.0.1/30
+DHCPServer=yes
+# make network stable
+IgnoreCarrierLoss=yes
+ConfigureWithoutCarrier=yes
+RouteMetric=1000
+
+
+[DHCPServer]
+PoolOffset=1
+BootFilename=vmlinuz-6.6.20-starfive
+BootServerAddress=10.0.0.1
+

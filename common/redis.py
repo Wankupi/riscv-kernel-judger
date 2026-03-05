@@ -41,7 +41,7 @@ class RedisTaskQueue(redis.Redis):
         while True:
             streams: list[Any] = await self.xread({key: last_id}, block=5000, count=128)
             if not streams:
-                return
+                continue
             for _, entries in streams:
                 for entry_id, fields in entries:
                     last_id = entry_id
