@@ -41,8 +41,6 @@ class KernelJudgerRunner:
         # make sure power is off before starting
         self.relay.off(config.runner.power_addrs)
         try:
-            # init the redis stream with an empty chunk to indicate the task has started
-            await self.queue_client.pub_result(task.id, b"")
             with (
                 Serial(config.runner.tty_board, baudrate=115200) as tty_board,
                 open(result_path, "wb") as result,

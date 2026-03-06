@@ -1,0 +1,33 @@
+[Unit]
+Description=RISCV Kernel Judger - Runner
+# redis
+Requires=redis.service
+After=redis.service
+# ttyACM0
+BindsTo=dev-serial-by\x2did-usb\x2d1a86_USB_Single_Serial_5658015986\x2dif00.device
+After=dev-serial-by\x2did-usb\x2d1a86_USB_Single_Serial_5658015986\x2dif00.device
+# ttyUSB0
+BindsTo=dev-serial-by\x2did-usb\x2d1a86_USB_Serial\x2dif00\x2dport0.device
+After=dev-serial-by\x2did-usb\x2d1a86_USB_Serial\x2dif00\x2dport0.device
+# tftp server
+BindsTo=lab-tftp.service
+After=lab-tftp.service
+# dhcp server
+Requires=systemd-networkd.service
+After=systemd-networkd.service
+BindsTo=sys-subsystem-net-devices-lab0.device
+After=sys-subsystem-net-devices-lab0.device
+
+[Service]
+Type=simple
+User=wkp
+Group=wkp
+WorkingDirectory=/opt/riscv-kernel-judger
+ExecStart=/opt/riscv-kernel-judger/.venv/bin/python -m runner.main
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=dev-serial-by\x2did-usb\x2d1a86_USB_Single_Serial_5658015986\x2dif00.device
+WantedBy=dev-serial-by\x2did-usb\x2d1a86_USB_Serial\x2dif00\x2dport0.device

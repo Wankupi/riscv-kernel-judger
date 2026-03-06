@@ -88,6 +88,8 @@ async def submit(
 
     try:
         await queue.enqueue(task)
+        # ensure the stream exists, to indicate the task is not finished yet
+        await queue.pub_result(task_id=submission_id, result=b"")
     except redis.RedisError as exc:
         if stored_path.exists():
             stored_path.unlink()
@@ -105,12 +107,14 @@ async def get_result(task_id: str) -> Response:
     # otherwise, return 404
     key: str = f"{config.redis.task_key}:{task_id}"
     result_path: Path = config.runner.result_dir / f"{task_id}.txt"
+    store_path: Path = config.server.upload_dir / f"{task_id}.img"
 
     # tricky logic to determine the state of the task:
-    started = result_path.exists()
-    finished = not bool(await queue.exists(key))
+    task_exists = store_path.exists()
+    if not task_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="task not found")
 
-    assert (not finished or started) and "invalid state: finished but not started"
+    finished = not bool(await queue.exists(key))
 
     if finished:
         return FileResponse(

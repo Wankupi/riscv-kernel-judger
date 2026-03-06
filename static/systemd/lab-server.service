@@ -1,0 +1,18 @@
+[Unit]
+Description=RISCV Kernel Judger - Server
+# redis
+After=redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=wkp
+Group=wkp
+WorkingDirectory=/opt/riscv-kernel-judger
+ExecStart=/opt/riscv-kernel-judger/.venv/bin/python -m server.web
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
